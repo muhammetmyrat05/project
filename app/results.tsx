@@ -1,337 +1,281 @@
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, SafeAreaView } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
-import { questions, correctAnswers } from '@/data/quizData';
-import { CheckCircle, XCircle } from 'lucide-react-native';
+// app/results.tsx – ŞİFRELİ "Yeni Teste Başla" BUTONU (cyber123)
+
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, TextInput, Alert } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { questions as q1, correctAnswers as a1 } from '@/data/test1';
+import { questions as q2, correctAnswers as a2 } from '@/data/test2';
+import { questions as q3, correctAnswers as a3 } from '@/data/test3';
 
 type OptionKey = 'A' | 'B' | 'C' | 'D';
 
 export default function ResultsScreen() {
   const router = useRouter();
-  const { name, group, answers: answersString } = useLocalSearchParams();
-  const userAnswers = JSON.parse(answersString as string) as Record<number, OptionKey>;
+  const { name, group, test, score, total, answers } = useLocalSearchParams();
 
-  const results = questions.map(question => {
-    const correctAnswer = correctAnswers.find(a => a.questionId === question.id)?.correctAnswer;
-    const userAnswer = userAnswers[question.id];
-    const isCorrect = userAnswer === correctAnswer;
+  const testNumber = test ? parseInt(test as string) : 1;
+  const userAnswers: Record<number, OptionKey> = answers ? JSON.parse(answers as string) : {};
+  const scoreNum = parseInt(score as string);
+  const totalNum = parseInt(total as string);
+  const percentage = Math.round((scoreNum / totalNum) * 100);
 
-    return {
-      question,
-      userAnswer,
-      correctAnswer,
-      isCorrect
-    };
-  });
+  const questions = testNumber === 2 ? q2 : testNumber === 3 ? q3 : q1;
+  const correctAnswers = testNumber === 2 ? a2 : testNumber === 3 ? a3 : a1;
 
-  const correctCount = results.filter(r => r.isCorrect).length;
-  const incorrectCount = results.length - correctCount;
-  const percentage = Math.round((correctCount / results.length) * 100);
+  // Şifre sistemi
+  const [password, setPassword] = useState('');
+  const [showPasswordInput, setShowPasswordInput] = useState(false);
 
-  const getGrade = () => {
-    if (percentage >= 90) return { text: 'Mükemmel!', color: '#10B981' };
-    if (percentage >= 75) return { text: 'Çok İyi!', color: '#3B82F6' };
-    if (percentage >= 60) return { text: 'İyi', color: '#F59E0B' };
-    if (percentage >= 50) return { text: 'Geçer', color: '#F59E0B' };
-    return { text: 'Geliştirilmeli', color: '#EF4444' };
+  const CORRECT_PASSWORD = 'cyber123';
+
+  const handleNewTest = () => {
+    if (password === CORRECT_PASSWORD) {
+      router.replace('/');
+    } else {
+      Alert.alert('Password incorrect', 'Enter the correct password, please', [{ text: 'OK' }]);
+      setPassword('');
+    }
   };
 
-  const grade = getGrade();
+  const performance = () => {
+    if (percentage >= 90) return { text: "Excellent", color: "#10B981" };
+    if (percentage >= 70) return { text: "Good", color: "#22C55E" };
+    if (percentage >= 50) return { text: "Fair", color: "#F59E0B" };
+    return { text: "Needs Improvement", color: "#EF4444" };
+  };
+
+  const getOptionText = (questionId: number, key: OptionKey | undefined) => {
+    if (!key) return "— (Unanswered)";
+    const q = questions.find(qq => qq.id === questionId);
+    return q ? `${key} (${q.options[key]})` : `${key} (?)`;
+  };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <LinearGradient
-        colors={['#0F2027', '#203A43', '#2C5364']}
-        style={styles.gradient}
-      >
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+    <View style={styles.container}>
+      <View style={{ flex: 1, backgroundColor: '#0F2027' }}>
+        <ScrollView contentContainerStyle={{ paddingBottom: 150 }} showsVerticalScrollIndicator={false}>
+          {/* Tüm önceki içerik aynı kalır (skor, performans, cevap listesi vs.) */}
           <View style={styles.header}>
-            <Text style={styles.title}>Test Sonuçları</Text>
+            <Text style={styles.title}>Quiz Completed!</Text>
             <View style={styles.studentInfo}>
-              <Text style={styles.studentName}>{name}</Text>
-              <Text style={styles.studentGroup}>{group}</Text>
+              <Text style={styles.studentText}>{name} • {group}</Text>
+              <Text style={styles.studentText}>Test {testNumber} • {totalNum} Questions</Text>
             </View>
           </View>
 
-          <View style={styles.scoreCard}>
-            <View style={[styles.scoreCircle, { borderColor: grade.color }]}>
-              <Text style={[styles.scorePercentage, { color: grade.color }]}>
-                %{percentage}
-              </Text>
-              <Text style={[styles.scoreGrade, { color: grade.color }]}>
-                {grade.text}
-              </Text>
-            </View>
-
-            <View style={styles.statsContainer}>
-              <View style={styles.statItem}>
-                <View style={[styles.statIcon, { backgroundColor: 'rgba(16, 185, 129, 0.2)' }]}>
-                  <CheckCircle size={24} color="#10B981" />
-                </View>
-                <Text style={styles.statValue}>{correctCount}</Text>
-                <Text style={styles.statLabel}>Doğru</Text>
-              </View>
-
-              <View style={styles.statDivider} />
-
-              <View style={styles.statItem}>
-                <View style={[styles.statIcon, { backgroundColor: 'rgba(239, 68, 68, 0.2)' }]}>
-                  <XCircle size={24} color="#EF4444" />
-                </View>
-                <Text style={styles.statValue}>{incorrectCount}</Text>
-                <Text style={styles.statLabel}>Yanlış</Text>
-              </View>
+          <View style={styles.scoreContainer}>
+            <View style={styles.scoreCircle}>
+              <Text style={styles.scoreText}>{percentage}</Text>
+              <Text style={styles.scorePercent}>%</Text>
             </View>
           </View>
 
-          <View style={styles.answersSection}>
-            <Text style={styles.sectionTitle}>Cevaplarınız</Text>
-            {results.map((result, index) => (
-              <View
-                key={result.question.id}
-                style={[
-                  styles.answerCard,
-                  result.isCorrect ? styles.answerCardCorrect : styles.answerCardIncorrect
-                ]}
-              >
-                <View style={styles.answerHeader}>
-                  <View style={styles.answerHeaderLeft}>
-                    <Text style={styles.questionNumber}>Soru {index + 1}</Text>
-                    {result.isCorrect ? (
-                      <CheckCircle size={20} color="#10B981" />
-                    ) : (
-                      <XCircle size={20} color="#EF4444" />
+          <View style={styles.performanceContainer}>
+            <View style={[styles.performanceCard, { borderColor: performance().color, backgroundColor: `${performance().color}20` }]}>
+              <Text style={[styles.performanceText, { color: performance().color }]}>
+                {performance().text}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.summaryCard}>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Correct</Text>
+              <Text style={styles.summaryValueCorrect}>{scoreNum}</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Incorrect / Unanswered</Text>
+              <Text style={styles.summaryValueWrong}>{totalNum - scoreNum}</Text>
+            </View>
+            <View style={[styles.summaryRow, styles.summaryRowLast]}>
+              <Text style={styles.summaryLabel}>Total</Text>
+              <Text style={styles.summaryValue}>{totalNum}</Text>
+            </View>
+          </View>
+
+          <View style={styles.answersContainer}>
+            <Text style={styles.answersTitle}>Answer Control</Text>
+            {questions.map((q, index) => {
+              const userAnswer = userAnswers[q.id];
+              const correct = correctAnswers.find(a => a.questionId === q.id)?.correctAnswer;
+              const isCorrect = userAnswer === correct;
+
+              return (
+                <View key={q.id} style={[styles.answerItem, isCorrect ? styles.answerCorrect : styles.answerWrong]}>
+                  <View style={styles.answerHeader}>
+                    <Text style={styles.questionNumber}>Question {index + 1}</Text>
+                    {isCorrect ? <Text style={styles.correctIcon}>Correct</Text> : <Text style={styles.wrongIcon}>Incorrect</Text>}
+                  </View>
+                  <Text style={styles.answerQuestion}>{q.question}</Text>
+                  <View style={styles.answerDetails}>
+                    <Text style={styles.answerText}>
+                      Your answer: <Text style={isCorrect ? styles.correctText : styles.wrongText}>
+                        {getOptionText(q.id, userAnswer)}
+                      </Text>
+                    </Text>
+                    {!isCorrect && correct && (
+                      <Text style={styles.answerText}>
+                        Correct answer: <Text style={styles.correctText}>
+                          {getOptionText(q.id, correct)}
+                        </Text>
+                      </Text>
                     )}
                   </View>
                 </View>
-
-                <Text style={styles.answerQuestion}>
-                  {result.question.question}
-                </Text>
-
-                <View style={styles.answerDetails}>
-                  <View style={styles.answerRow}>
-                    <Text style={styles.answerLabel}>Sizin Cevabınız:</Text>
-                    <View style={[
-                      styles.answerBadge,
-                      result.isCorrect ? styles.answerBadgeCorrect : styles.answerBadgeIncorrect
-                    ]}>
-                      <Text style={[
-                        styles.answerBadgeText,
-                        result.isCorrect ? styles.answerBadgeTextCorrect : styles.answerBadgeTextIncorrect
-                      ]}>
-                        {result.userAnswer} - {result.question.options[result.userAnswer]}
-                      </Text>
-                    </View>
-                  </View>
-
-                  {!result.isCorrect && (
-                    <View style={styles.answerRow}>
-                      <Text style={styles.answerLabel}>Doğru Cevap:</Text>
-                      <View style={[styles.answerBadge, styles.answerBadgeCorrect]}>
-                        <Text style={[styles.answerBadgeText, styles.answerBadgeTextCorrect]}>
-                          {result.correctAnswer} - {result.question.options[result.correctAnswer!]}
-                        </Text>
-                      </View>
-                    </View>
-                  )}
-                </View>
-              </View>
-            ))}
+              );
+            })}
           </View>
-
-          <TouchableOpacity
-            style={styles.restartButton}
-            onPress={() => router.push('/')}
-          >
-            <Text style={styles.restartButtonText}>Yeni Test Başlat</Text>
-          </TouchableOpacity>
         </ScrollView>
-      </LinearGradient>
-    </SafeAreaView>
+
+        {/* ŞİFRELİ BUTON */}
+        <View style={styles.fixedButtonContainer}>
+          {!showPasswordInput ? (
+            <TouchableOpacity
+              style={styles.lockedButton}
+              onPress={() => setShowPasswordInput(true)}
+            >
+              <Text style={styles.lockedButtonText}>Start the new test</Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.passwordBox}>
+              <TextInput
+                style={styles.passwordInput}
+                placeholder="Enter Password..."
+                placeholderTextColor="#94A3B8"
+                secureTextEntry
+                value={password}
+                onChangeText={setPassword}
+                onSubmitEditing={handleNewTest}
+                autoFocus
+              />
+
+              <View style={styles.buttonRow}>
+                <TouchableOpacity style={styles.fullWidthButton} onPress={handleNewTest}>
+                  <Text style={styles.fullWidthButtonText}>Enter</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={styles.cancelButton} 
+                  onPress={() => { 
+                    setShowPasswordInput(false); 
+                    setPassword(''); 
+                  }}
+                >
+                  <Text style={styles.fullWidthButtonText}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+        </View>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  container: { flex: 1 },
+  gradient: { flex: 1 },
+  header: { alignItems: 'center', paddingTop: 20 },
+  title: { fontSize: 32, fontWeight: '800', color: '#FFFFFF', marginBottom: 16 },
+  studentInfo: { paddingHorizontal: 20, paddingVertical: 12, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 16 },
+  studentText: { fontSize: 18, color: '#E2E8F0', textAlign: 'center', fontWeight: '600' },
+  scoreContainer: { alignItems: 'center', marginVertical: 30 },
+  scoreCircle: { width: 220, height: 220, borderRadius: 110, backgroundColor: 'rgba(16,185,129,0.2)', borderWidth: 12, borderColor: '#10B981', justifyContent: 'center', alignItems: 'center' },
+  scoreText: { fontSize: 64, fontWeight: '900', color: '#10B981' },
+  scorePercent: { fontSize: 28, color: '#94A3B8', marginTop: -10 },
+  performanceContainer: { alignItems: 'center', paddingHorizontal: 20, marginBottom: 20 },
+  performanceCard: { paddingHorizontal: 32, paddingVertical: 16, borderRadius: 40, minWidth: 260, alignItems: 'center', borderWidth: 2 },
+  performanceText: { fontSize: 21, fontWeight: '800' },
+  summaryCard: { marginHorizontal: 20, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 20, padding: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', marginBottom: 30 },
+  summaryRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.08)' },
+  summaryRowLast: { borderBottomWidth: 0 },
+  summaryLabel: { fontSize: 17, color: '#94A3B8', fontWeight: '600' },
+  summaryValueCorrect: { fontSize: 17, color: '#10B981', fontWeight: '700' },
+  summaryValueWrong: { fontSize: 17, color: '#EF4444', fontWeight: '700' },
+  summaryValue: { fontSize: 17, color: '#FFFFFF', fontWeight: '700' },
+  answersContainer: { marginHorizontal: 20, marginBottom: 20 },
+  answersTitle: { fontSize: 22, fontWeight: '800', color: '#FFFFFF', marginBottom: 16, textAlign: 'center' },
+  answerItem: { backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' },
+  answerCorrect: { borderColor: '#10B981', backgroundColor: 'rgba(16,185,129,0.12)' },
+  answerWrong: { borderColor: '#EF4444', backgroundColor: 'rgba(239,68,68,0.12)' },
+  answerHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  questionNumber: { fontSize: 15, color: '#94A3B8', fontWeight: '600' },
+  correctIcon: { fontSize: 18, color: '#10B981', fontWeight: '800' },
+  wrongIcon: { fontSize: 18, color: '#EF4444', fontWeight: '800' },
+  answerQuestion: { fontSize: 16, color: '#E2E8F0', marginBottom: 10, lineHeight: 22 },
+  answerDetails: { gap: 6 },
+  answerText: { fontSize: 15, color: '#CBD5E1' },
+  correctText: { color: '#10B981', fontWeight: '700' },
+  wrongText: { color: '#EF4444', fontWeight: '700' },
+
+    fixedButtonContainer: { 
+    position: 'absolute', 
+    bottom: 0, 
+    left: 0, 
+    right: 0, 
+    paddingHorizontal: 20, 
+    paddingVertical: 20,
+    paddingBottom: 50,  // ← iPhone home bar, Samsung gesture bar için güvenli alan
+    backgroundColor: 'rgba(15,32,39,0.98)', 
+    borderTopWidth: 1, 
+    borderTopColor: 'rgba(255,255,255,0.12)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 10,
   },
-  gradient: {
-    flex: 1,
+  lockedButton: { 
+    backgroundColor: '#10B981', 
+    paddingVertical: 18, 
+    borderRadius: 16, 
+    alignItems: 'center' 
   },
-  scrollContent: {
-    padding: 20,
-    paddingBottom: 40,
+  lockedButtonText: { 
+    fontSize: 18, 
+    fontWeight: '800', 
+    color: '#FFFFFF' 
   },
-  header: {
-    marginBottom: 24,
+  passwordBox: { 
+    width: '100%', 
+    alignItems: 'center' 
   },
-  title: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    textAlign: 'center',
-    marginBottom: 16,
+  passwordInput: { 
+    backgroundColor: 'rgba(255,255,255,0.15)', 
+    width: '100%', 
+    padding: 18, 
+    borderRadius: 16, 
+    color: '#FFFFFF', 
+    fontSize: 18, 
+    textAlign: 'center', 
+    borderWidth: 2, 
+    borderColor: '#10B981',
+    marginBottom: 16
   },
-  studentInfo: {
-    alignItems: 'center',
+  buttonRow: { 
+    flexDirection: 'row', 
+    gap: 12, 
+    width: '100%' 
   },
-  studentName: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#FFFFFF',
+  fullWidthButton: { 
+    flex: 1, 
+    backgroundColor: '#10B981', 
+    paddingVertical: 18, 
+    borderRadius: 16, 
+    alignItems: 'center' 
   },
-  studentGroup: {
-    fontSize: 14,
-    color: '#94A3B8',
-    marginTop: 4,
+  cancelButton: { 
+    flex: 1, 
+    backgroundColor: '#EF4444', 
+    paddingVertical: 18, 
+    borderRadius: 16, 
+    alignItems: 'center' 
   },
-  scoreCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 20,
-    padding: 24,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    alignItems: 'center',
+  fullWidthButtonText: { 
+    color: '#FFFFFF', 
+    fontWeight: '800', 
+    fontSize: 18 
   },
-  scoreCircle: {
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    borderWidth: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-  },
-  scorePercentage: {
-    fontSize: 48,
-    fontWeight: '700',
-  },
-  scoreGrade: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginTop: 4,
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    width: '100%',
-    alignItems: 'center',
-  },
-  statItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  statIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  statValue: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 14,
-    color: '#94A3B8',
-  },
-  statDivider: {
-    width: 1,
-    height: 60,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  answersSection: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 16,
-  },
-  answerCard: {
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 2,
-  },
-  answerCardCorrect: {
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-    borderColor: 'rgba(16, 185, 129, 0.3)',
-  },
-  answerCardIncorrect: {
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-    borderColor: 'rgba(239, 68, 68, 0.3)',
-  },
-  answerHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  answerHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  questionNumber: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#94A3B8',
-  },
-  answerQuestion: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    marginBottom: 12,
-    lineHeight: 24,
-  },
-  answerDetails: {
-    gap: 8,
-  },
-  answerRow: {
-    gap: 8,
-  },
-  answerLabel: {
-    fontSize: 12,
-    color: '#94A3B8',
-    marginBottom: 4,
-  },
-  answerBadge: {
-    padding: 10,
-    borderRadius: 8,
-  },
-  answerBadgeCorrect: {
-    backgroundColor: 'rgba(16, 185, 129, 0.2)',
-  },
-  answerBadgeIncorrect: {
-    backgroundColor: 'rgba(239, 68, 68, 0.2)',
-  },
-  answerBadgeText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  answerBadgeTextCorrect: {
-    color: '#10B981',
-  },
-  answerBadgeTextIncorrect: {
-    color: '#EF4444',
-  },
-  restartButton: {
-    backgroundColor: '#10B981',
-    borderRadius: 12,
-    padding: 18,
-    alignItems: 'center',
-  },
-  restartButtonText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
+  smallButton: { flex: 1, backgroundColor: '#10B981', paddingVertical: 14, borderRadius: 12, alignItems: 'center' },
+  smallButtonText: { color: '#FFFFFF', fontWeight: '700', fontSize: 16 },
 });
